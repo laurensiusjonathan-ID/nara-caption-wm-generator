@@ -1,281 +1,189 @@
-# Video Caption Watermark API
+# Nara Caption & Watermark Generator
 
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org)
 [![FastAPI](https://img.shields.io/badge/FastAPI-0.100+-green.svg)](https://fastapi.tiangolo.com)
+[![CI](https://github.com/laurensiusjonathan-ID/nara-caption-wm-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/laurensiusjonathan-ID/nara-caption-wm-generator/actions/workflows/ci.yml)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-API untuk menambahkan caption otomatis dan watermark ke video e-course. Dibangun dengan FastAPI, Celery, dan FFmpeg. Mendukung bahasa Indonesia untuk caption generation menggunakan faster-whisper.
+Desktop-first pipeline untuk mempercepat produksi video e-learning: **auto-caption + watermark batch processing** dengan kualitas konsisten dan workflow yang bisa dipakai non-teknis.
 
-> Mode saat ini: **desktop-first (CustomTkinter)**. Backend dijalankan untuk dipakai UI desktop lokal, sehingga CORS browser tidak diaktifkan secara default.
+---
 
-## ✨ Fitur
+## Why this project
 
-- 🎥 **Upload & Manajemen Video** - Support MP4, MOV, AVI
-- 📝 **Auto Caption Generation** - Speech-to-text dengan dukungan Bahasa Indonesia
-- 🖼️ **Watermark** - Tambahkan logo dengan posisi dan opacity yang bisa dikustomisasi
-- ⚙️ **Background Processing** - Async job dengan Celery + Redis
-- 📊 **Job Tracking** - Monitor status dan progress processing
-- 🐳 **Docker Ready** - Deploy mudah dengan Docker Compose
-- 📚 **API Docs** - Auto-generated OpenAPI/Swagger
+Produksi konten kursus sering makan waktu karena proses repetitif:
+- generate caption per video,
+- burn subtitle ke output,
+- tambahkan branding watermark,
+- monitor proses untuk banyak file sekaligus.
 
-## 🚀 Quick Start
+Project ini dibuat untuk mengubah proses manual itu jadi **workflow yang repeatable**, terukur, dan siap dipakai tim kecil.
 
-### Menggunakan Docker Compose (Recommended)
+---
+
+## What you can do with it
+
+- **Batch process banyak video** (MP4/MOV/AVI) dalam satu alur.
+- **Generate caption otomatis** (Indonesia/English) pakai Whisper.
+- **Burn watermark** dengan posisi dan opacity yang bisa diatur.
+- **Pilih mode cover**: delay overlay atau intro merge.
+- **Pantau progress job** via API (Celery + Redis).
+- **Jalankan lewat desktop UI** (CustomTkinter) untuk operator non-dev.
+
+---
+
+## Product highlights (portfolio view)
+
+- **Business impact:** memangkas waktu handling video dari proses manual per-file jadi batch workflow.
+- **Operator-friendly:** UI desktop untuk tim konten, bukan hanya API untuk engineer.
+- **Production-minded:** asynchronous background jobs, structured API, dan test suite.
+- **Extensible:** API-first architecture memudahkan integrasi ke frontend web/mobile di fase berikutnya.
+
+---
+
+## Architecture snapshot
+
+- **Desktop UI:** CustomTkinter (`ui_batch_app/`)
+- **Backend API:** FastAPI (`app/main.py`)
+- **Async jobs:** Celery + Redis (`app/tasks/`)
+- **Media processing:** FFmpeg (`app/services/video_processor.py`)
+- **Caption engine:** faster-whisper (`app/services/caption_generator.py`)
+
+Current mode: **desktop-first**. Karena sekarang dipakai lokal via desktop app, CORS browser tidak diaktifkan secara default.
+
+---
+
+## Quick start (desktop-first)
+
+### 1) Prepare environment (Python 3.11+)
 
 ```bash
-# Clone repo
-git clone https://github.com/username/video-caption-watermark-api.git
-cd video-caption-watermark-api
-
-# Copy environment file
-cp .env.example .env
-
-# Start services
-docker-compose up -d
-
-# Cek status
-docker-compose ps
+python -m venv .venv
 ```
 
-Akses API:
-- 🌐 API: http://localhost:8000
-- 📖 Swagger UI: http://localhost:8000/docs
-- 📘 ReDoc: http://localhost:8000/redoc
-
-### Local Development
+Windows:
 
 ```bash
-# Install dependencies
+.venv\Scripts\activate
 pip install -r requirements.txt
+```
 
-# Install FFmpeg
-# Ubuntu: sudo apt-get install ffmpeg
-# macOS: brew install ffmpeg
-# Windows: download dari ffmpeg.org
+macOS/Linux:
 
-# Start Redis
+```bash
+source .venv/bin/activate
+pip install -r requirements.txt
+```
+
+Install FFmpeg:
+- Ubuntu: `sudo apt-get install ffmpeg`
+- macOS: `brew install ffmpeg`
+- Windows: install dari ffmpeg.org dan pastikan masuk PATH
+
+### 2) Start infrastructure
+
+```bash
 redis-server
+```
 
-# Start API (terminal 1)
+### 3) Start API + worker
+
+```bash
+# terminal 1
 uvicorn app.main:app --reload
 
-# Start Celery worker (terminal 2)
+# terminal 2
 celery -A app.tasks.celery_app worker --loglevel=info
 ```
 
-## 🎬 Batch Script Usage (Many Videos + 1 Logo)
+### 4) Launch desktop UI
 
-Untuk proses banyak video otomatis via Windows script:
-
-### 1) Siapkan input folder
-
-Masukkan file ke `storage/batch_input/`:
-- banyak video (`.mp4`, `.mov`, `.avi`)
-- **tepat 1** file logo `.png`
-
-Contoh:
-
-```text
-storage/batch_input/
-├── kelas-01.mp4
-├── kelas-02.mov
-├── kelas-03.avi
-└── logo.png
-```
-
-Rule logo:
-- 0 logo PNG -> batch berhenti (fatal)
-- >1 logo PNG -> batch berhenti (fatal)
-
-### 2) Jalankan batch
-
-Mode CLI (existing):
-
-```bat
-batch_process.bat
-```
-
-Mode UI (CustomTkinter) — **utama/recommended**:
-
-```bat
+```bash
 batch_ui.bat
 ```
 
-Atau smoke run langsung:
+Atau:
 
 ```bash
 python -m ui_batch_app.main
 ```
 
-Catatan:
-- `test-ui.html` hanya untuk pengujian manual berbasis browser.
-- Karena mode default desktop-only, CORS backend tidak diaktifkan secara default.
+---
 
-> Launcher `.bat` **wajib virtual environment** (`.venv` atau `venv`).  
-> Jika tidak ditemukan, script akan stop dengan error dan tidak lanjut proses.
+## Batch workflow
 
-Behavior rules:
-1. Watermark selalu ON (mandatory)
-2. Caption optional (OFF = skip generate + burn caption)
-3. Cover mode exclusive: `delay_overlay` atau `intro_merge`
-4. `intro_merge` dieksekusi terakhir: main video diproses dulu, lalu intro plain di-prepend
-5. Intro tetap plain (tanpa caption/watermark)
-6. Simpan hasil ke output folder yang dipilih/di-config
+1. Pilih folder video input.
+2. Tentukan output folder.
+3. Pilih logo PNG (watermark mandatory).
+4. Pilih caption ON/OFF + cover mode.
+5. Start run dan pantau progress + summary.
 
-### 3) Cek output
+Exit code batch:
+- `0` semua success/skip
+- `1` partial failure
+- `2` fatal startup/config/preflight
+- `3` tidak ada video input
 
-Hasil akhir ada di:
+---
+
+## API endpoints (core)
+
+| Domain | Endpoint examples |
+|---|---|
+| Videos | `POST /api/v1/videos/upload`, `GET /api/v1/videos/{video_id}` |
+| Captions | `POST /api/v1/videos/{video_id}/captions/generate`, `GET /api/v1/videos/{video_id}/captions` |
+| Watermarks | `POST /api/v1/watermarks/upload`, `GET /api/v1/watermarks/{watermark_id}` |
+| Processing | `POST /api/v1/videos/{video_id}/process`, `GET /api/v1/videos/{video_id}/output` |
+| Jobs | `GET /api/v1/jobs/{job_id}`, `GET /api/v1/jobs` |
+
+Interactive docs:
+- Swagger: `http://localhost:8000/docs`
+- ReDoc: `http://localhost:8000/redoc`
+
+---
+
+## Tech stack
+
+- Python, FastAPI, Pydantic
+- Celery, Redis
+- FFmpeg, faster-whisper
+- CustomTkinter
+- Pytest
+
+---
+
+## Project structure
 
 ```text
-storage/batch_output/
-├── kelas-01_processed.mp4
-├── kelas-02_processed.mp4
-└── kelas-03_processed.mp4
-```
-
-### Exit code batch
-
-- `0`: semua success/skip
-- `1`: partial failure (ada video gagal)
-- `2`: fatal startup/config/preflight
-- `3`: tidak ada video input
-
-Detail konfigurasi: lihat `scripts/batch_config.json` (termasuk `whisper_model_size`)  
-Panduan lengkap: `docs/batch-processing.md`
-
-Catatan: `cover_duration_sec` configurable per kebutuhan video.
-- `0.0` = caption/watermark muncul normal dari awal (sesuai timestamp Whisper)
-- `3.0` = 3 detik pertama tanpa caption/watermark (mis. video dengan cover opening)
-
-## 📡 API Endpoints
-
-### Videos
-| Method | Endpoint | Deskripsi |
-|--------|----------|-----------|
-| POST | `/api/v1/videos/upload` | Upload video |
-| GET | `/api/v1/videos/{video_id}` | Get metadata video |
-| DELETE | `/api/v1/videos/{video_id}` | Hapus video |
-
-### Captions
-| Method | Endpoint | Deskripsi |
-|--------|----------|-----------|
-| POST | `/api/v1/videos/{video_id}/captions/generate` | Generate caption otomatis |
-| GET | `/api/v1/videos/{video_id}/captions` | Get caption (SRT/VTT) |
-| PUT | `/api/v1/videos/{video_id}/captions` | Update/edit caption |
-
-### Watermarks
-| Method | Endpoint | Deskripsi |
-|--------|----------|-----------|
-| POST | `/api/v1/watermarks/upload` | Upload watermark (PNG) |
-| GET | `/api/v1/watermarks/{watermark_id}` | Get info watermark |
-| DELETE | `/api/v1/watermarks/{watermark_id}` | Hapus watermark |
-
-### Processing
-| Method | Endpoint | Deskripsi |
-|--------|----------|-----------|
-| POST | `/api/v1/videos/{video_id}/process` | Process video (burn caption + watermark) |
-| GET | `/api/v1/videos/{video_id}/output` | Download hasil |
-
-### Jobs
-| Method | Endpoint | Deskripsi |
-|--------|----------|-----------|
-| GET | `/api/v1/jobs/{job_id}` | Get status job |
-| GET | `/api/v1/jobs` | List semua jobs |
-
-## 🔄 Contoh Flow Lengkap
-
-```bash
-# 1. Upload video
-curl -X POST "http://localhost:8000/api/v1/videos/upload" -F "file=@video.mp4"
-# Response: {"video_id": "abc123", ...}
-
-# 2. Generate caption
-curl -X POST "http://localhost:8000/api/v1/videos/abc123/captions/generate" \
-  -H "Content-Type: application/json" \
-  -d '{"language": "id"}'
-# Response: {"job_id": "job-xyz", "status": "pending"}
-
-# 3. Cek status job
-curl "http://localhost:8000/api/v1/jobs/job-xyz"
-# Tunggu sampai status: "completed"
-
-# 4. Upload watermark
-curl -X POST "http://localhost:8000/api/v1/watermarks/upload" -F "file=@logo.png"
-# Response: {"watermark_id": "wm-456", ...}
-
-# 5. Process video
-curl -X POST "http://localhost:8000/api/v1/videos/abc123/process" \
-  -H "Content-Type: application/json" \
-  -d '{"burn_captions": true, "watermark_id": "wm-456"}'
-
-# 6. Download hasil
-curl "http://localhost:8000/api/v1/videos/abc123/output" -o output.mp4
-```
-
-## ⚙️ Konfigurasi
-
-Konfigurasi via environment variables. Lihat `.env.example`:
-
-| Variable | Default | Deskripsi |
-|----------|---------|-----------|
-| `REDIS_HOST` | localhost | Redis host |
-| `REDIS_PORT` | 6379 | Redis port |
-| `STORAGE_BASE_PATH` | ./storage | Path penyimpanan file |
-| `WHISPER_MODEL_SIZE` | base | Model whisper (tiny/base/small/medium/large) |
-| `DEFAULT_CAPTION_LANGUAGE` | id | Bahasa default caption |
-| `MAX_UPLOAD_SIZE_MB` | 500 | Max ukuran upload |
-
-## 📁 Struktur Project
-
-```
 .
-├── app/
-│   ├── api/           # API endpoints
-│   ├── models/        # Pydantic schemas
-│   ├── services/      # Business logic
-│   ├── tasks/         # Celery tasks
-│   ├── storage/       # File storage layer
-│   ├── config.py      # Configuration
-│   └── main.py        # FastAPI app
-├── tests/             # Test suite
-├── storage/           # File storage (runtime)
-├── docker-compose.yml
-├── Dockerfile
-└── requirements.txt
+├── app/                # API, services, tasks
+├── ui_batch_app/       # Desktop UI layer
+├── scripts/            # Batch processing utilities
+├── tests/              # Unit & integration tests
+├── .github/workflows/  # CI pipeline
+└── README.md
 ```
 
-## 🧪 Testing
+---
+
+## Testing
 
 ```bash
-# Run semua tests
 pytest
-
-# Dengan coverage
 pytest --cov=app
-
-# Test spesifik
-pytest tests/test_videos_api.py -v
 ```
 
-## 🐳 Docker Services
+---
 
-| Service | Port | Deskripsi |
-|---------|------|-----------|
-| api | 8000 | FastAPI server |
-| celery_worker | - | Background worker |
-| redis | 6379 | Message broker |
+## Roadmap ideas
 
-## 📝 Watermark Options
+- Preset templates per course brand
+- Multi-language caption packs
+- Export analytics (durasi, failed reasons, throughput)
+- Optional web dashboard on top of existing API
 
-| Parameter | Values | Default |
-|-----------|--------|---------|
-| position | top-left, top-right, bottom-left, bottom-right, center | bottom-right |
-| opacity | 0.0 - 1.0 | 0.5 |
+---
 
-## 🤝 Contributing
+## License
 
-Contributions welcome! Silakan buat Pull Request.
-
-## 📄 License
-
-MIT License - lihat [LICENSE](LICENSE) untuk detail.
+MIT — lihat [LICENSE](LICENSE).
