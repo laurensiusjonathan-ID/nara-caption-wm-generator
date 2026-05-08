@@ -69,3 +69,7 @@ Thumbs.db
 # Local tooling state
 .opencode/
 .claude/
+
+# Exclude project assets from public repo
+docs/
+storage/
