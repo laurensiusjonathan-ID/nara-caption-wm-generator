@@ -1,0 +1,16 @@
+{
+  "target_folder": "../storage/batch_input",
+  "output_folder": "../storage/batch_output",
+  "caption_enabled": true,
+  "manual_logo_path": null,
+  "cover_mode": "delay_overlay",
+  "cover_duration_sec": 0.0,
+  "intro_video_path": null,
+  "caption_language": "id",
+  "caption_format": "srt",
+  "whisper_model_size": "medium",
+  "caption_sync_correction_sec": 0.0,
+  "watermark_enabled": true,
+  "watermark_opacity": 0.75,
+  "supported_video_formats": ["mp4", "mov", "avi"]
+}

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nara API Test UI</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0f172a; color: #e2e8f0; min-height: 100vh; }
+
+    .header { background: #1e293b; border-bottom: 1px solid #334155; padding: 16px 24px; display: flex; align-items: center; gap: 12px; }
+    .header h1 { font-size: 18px; font-weight: 600; }
+    .header .badge { background: #059669; color: white; font-size: 11px; padding: 2px 8px; border-radius: 9999px; }
+    .header .badge.off { background: #dc2626; }
+
+    .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+
+    .steps { display: flex; gap: 8px; margin-bottom: 24px; flex-wrap: wrap; }
+    .step-btn { padding: 8px 16px; border: 1px solid #334155; background: #1e293b; color: #94a3b8; border-radius: 8px; cursor: pointer; font-size: 13px; transition: all 0.2s; }
+    .step-btn:hover { border-color: #6366f1; color: #e2e8f0; }
+    .step-btn.active { background: #6366f1; border-color: #6366f1; color: white; }
+    .step-btn .num { font-weight: 700; margin-right: 4px; }
+
+    .panel { background: #1e293b; border: 1px solid #334155; border-radius: 12px; padding: 24px; display: none; }
+    .panel.active { display: block; }
+    .panel h2 { font-size: 16px; margin-bottom: 4px; }
+    .panel .desc { color: #94a3b8; font-size: 13px; margin-bottom: 20px; }
+
+    .form-group { margin-bottom: 16px; }
+    .form-group label { display: block; font-size: 13px; color: #94a3b8; margin-bottom: 6px; }
+    .form-group input, .form-group select { width: 100%; padding: 10px 12px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; color: #e2e8f0; font-size: 14px; }
+    .form-group input:focus, .form-group select:focus { outline: none; border-color: #6366f1; }
+    .form-group input[type="file"] { padding: 8px; }
+    .form-group input[type="range"] { padding: 0; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+
+    .btn { padding: 10px 20px; border: none; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; }
+    .btn-primary { background: #6366f1; color: white; }
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-primary:disabled { background: #334155; color: #64748b; cursor: not-allowed; }
+    .btn-success { background: #059669; color: white; }
+    .btn-danger { background: #dc2626; color: white; }
+
+    .result { margin-top: 16px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; font-family: 'Fira Code', monospace; font-size: 13px; max-height: 300px; overflow-y: auto; white-space: pre-wrap; word-break: break-all; display: none; }
+    .result.show { display: block; }
+    .result.success { border-color: #059669; }
+    .result.error { border-color: #dc2626; }
+
+    .status-bar { display: flex; align-items: center; gap: 8px; padding: 12px 16px; background: #0f172a; border: 1px solid #334155; border-radius: 8px; margin-bottom: 16px; }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; }
+    .status-dot.green { background: #22c55e; }
+    .status-dot.yellow { background: #eab308; animation: pulse 1s infinite; }
+    .status-dot.red { background: #ef4444; }
+
+    .progress-bar { width: 100%; height: 6px; background: #334155; border-radius: 3px; overflow: hidden; margin-top: 8px; }
+    .progress-fill { height: 100%; background: #6366f1; border-radius: 3px; transition: width 0.3s; }
+
+    .info-card { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 12px 16px; margin-bottom: 12px; }
+    .info-card .label { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    .info-card .value { font-size: 15px; font-weight: 600; color: #e2e8f0; margin-top: 2px; }
+
+    .checkbox-group { display: flex; align-items: center; gap: 8px; }
+    .checkbox-group input[type="checkbox"] { width: 18px; height: 18px; accent-color: #6366f1; }
+
+    .spinner { display: inline-block; width: 16px; height: 16px; border: 2px solid #334155; border-top-color: #6366f1; border-radius: 50%; animation: spin 0.6s linear infinite; margin-right: 8px; vertical-align: middle; }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+    @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+
+    .caption-preview { background: #0f172a; border: 1px solid #334155; border-radius: 8px; padding: 16px; margin-top: 12px; max-height: 200px; overflow-y: auto; font-size: 13px; line-height: 1.6; }
+  </style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Nara Caption & WM Generator</h1>
+  <span id="serverBadge" class="badge off">Checking...</span>
+</div>
+
+<div class="container">
+  <!-- Steps Navigation -->
+  <div class="steps">
+    <button class="step-btn active" onclick="showStep(0)"><span class="num">1</span>Upload Video</button>
+    <button class="step-btn" onclick="showStep(1)"><span class="num">2</span>Generate Caption</button>
+    <button class="step-btn" onclick="showStep(2)"><span class="num">3</span>Upload Watermark</button>
+    <button class="step-btn" onclick="showStep(3)"><span class="num">4</span>Process Video</button>
+    <button class="step-btn" onclick="showStep(4)"><span class="num">5</span>Download Output</button>
+    <button class="step-btn" onclick="showStep(5)"><span class="num">6</span>Jobs</button>
+  </div>
+
+  <!-- Step 1: Upload Video -->
+  <div class="panel active" id="step-0">
+    <h2>Upload Video</h2>
+    <p class="desc">Upload file video (MP4, MOV, AVI) maks 500MB</p>
+    <div class="form-group">
+      <label>Pilih File Video</label>
+      <input type="file" id="videoFile" accept=".mp4,.mov,.avi">
+    </div>
+    <button class="btn btn-primary" onclick="uploadVideo()">Upload Video</button>
+    <div class="result" id="result-0"></div>
+  </div>
+
+  <!-- Step 2: Generate Caption -->
+  <div class="panel" id="step-1">
+    <h2>Generate Caption (AI)</h2>
+    <p class="desc">Generate caption otomatis dari audio video menggunakan Whisper AI</p>
+    <div class="form-group">
+      <label>Video ID</label>
+      <input type="text" id="captionVideoId" placeholder="Akan terisi otomatis setelah upload">
+    </div>
+    <div class="row">
+      <div class="form-group">
+        <label>Bahasa</label>
+        <select id="captionLang">
+          <option value="id">Indonesia</option>
+          <option value="en">English</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Format Output</label>
+        <select id="captionFormat">
+          <option value="srt">SRT</option>
+          <option value="vtt">VTT</option>
+        </select>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="generateCaption()">Generate Caption</button>
+    <div id="captionStatus" style="margin-top:12px;display:none;">
+      <div class="status-bar">
+        <div class="status-dot yellow" id="captionDot"></div>
+        <span id="captionStatusText">Processing...</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="captionProgress" style="width:0%"></div></div>
+    </div>
+    <div class="result" id="result-1"></div>
+    <div class="caption-preview" id="captionPreview" style="display:none;"></div>
+  </div>
+
+  <!-- Step 3: Upload Watermark -->
+  <div class="panel" id="step-2">
+    <h2>Upload Watermark</h2>
+    <p class="desc">Upload logo watermark (PNG only)</p>
+    <div class="form-group">
+      <label>Pilih File PNG</label>
+      <input type="file" id="watermarkFile" accept=".png">
+    </div>
+    <button class="btn btn-primary" onclick="uploadWatermark()">Upload Watermark</button>
+    <div class="result" id="result-2"></div>
+  </div>
+
+  <!-- Step 4: Process Video -->
+  <div class="panel" id="step-3">
+    <h2>Process Video</h2>
+    <p class="desc">Burn caption dan/atau watermark ke dalam video</p>
+    <div class="form-group">
+      <label>Video ID</label>
+      <input type="text" id="processVideoId" placeholder="Akan terisi otomatis">
+    </div>
+    <div class="row">
+      <div class="form-group">
+        <div class="checkbox-group">
+          <input type="checkbox" id="applyCaptions" checked>
+          <label for="applyCaptions">Terapkan Caption</label>
+        </div>
+      </div>
+      <div class="form-group">
+        <div class="checkbox-group">
+          <input type="checkbox" id="applyWatermark">
+          <label for="applyWatermark">Terapkan Watermark</label>
+        </div>
+      </div>
+    </div>
+    <div id="watermarkOptions" style="display:none;">
+      <div class="form-group">
+        <label>Watermark ID</label>
+        <input type="text" id="processWatermarkId" placeholder="Akan terisi otomatis">
+      </div>
+      <div class="row">
+        <div class="form-group">
+          <label>Posisi</label>
+          <select id="watermarkPosition">
+            <option value="top-left">Kiri Atas</option>
+            <option value="top-right">Kanan Atas</option>
+            <option value="bottom-left">Kiri Bawah</option>
+            <option value="bottom-right" selected>Kanan Bawah</option>
+            <option value="center">Tengah</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Opacity: <span id="opacityValue">0.8</span></label>
+          <input type="range" id="watermarkOpacity" min="0.1" max="1" step="0.1" value="0.8" oninput="document.getElementById('opacityValue').textContent=this.value">
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-primary" onclick="processVideo()">Process Video</button>
+    <div id="processStatus" style="margin-top:12px;display:none;">
+      <div class="status-bar">
+        <div class="status-dot yellow" id="processDot"></div>
+        <span id="processStatusText">Processing...</span>
+      </div>
+      <div class="progress-bar"><div class="progress-fill" id="processProgress" style="width:0%"></div></div>
+    </div>
+    <div class="result" id="result-3"></div>
+  </div>
+
+  <!-- Step 5: Download -->
+  <div class="panel" id="step-4">
+    <h2>Download Output</h2>
+    <p class="desc">Download video yang sudah diproses</p>
+    <div class="form-group">
+      <label>Video ID</label>
+      <input type="text" id="downloadVideoId" placeholder="Akan terisi otomatis">
+    </div>
+    <button class="btn btn-success" onclick="downloadOutput()">Download Video</button>
+    <div class="result" id="result-4"></div>
+  </div>
+
+  <!-- Step 6: Jobs -->
+  <div class="panel" id="step-5">
+    <h2>Jobs Monitor</h2>
+    <p class="desc">Lihat status semua background jobs</p>
+    <button class="btn btn-primary" onclick="listJobs()">Refresh Jobs</button>
+    <div class="result" id="result-5"></div>
+  </div>
+</div>
+
+<script>
+  const API = 'http://localhost:8000/api/v1';
+  let state = { videoId: null, watermarkId: null, captionJobId: null, processJobId: null };
+
+  // Check server status
+  async function checkServer() {
+    const badge = document.getElementById('serverBadge');
+    try {
+      const res = await fetch('http://localhost:8000/docs', { mode: 'no-cors' });
+      badge.textContent = 'Connected';
+      badge.className = 'badge';
+    } catch {
+      badge.textContent = 'Offline';
+      badge.className = 'badge off';
+    }
+  }
+  checkServer();
+  setInterval(checkServer, 10000);
+
+  // Navigation
+  function showStep(i) {
+    document.querySelectorAll('.panel').forEach((p, idx) => {
+      p.classList.toggle('active', idx === i);
+    });
+    document.querySelectorAll('.step-btn').forEach((b, idx) => {
+      b.classList.toggle('active', idx === i);
+    });
+  }
+
+  // Toggle watermark options
+  document.getElementById('applyWatermark').addEventListener('change', function() {
+    document.getElementById('watermarkOptions').style.display = this.checked ? 'block' : 'none';
+  });
+
+  // Show result
+  function showResult(stepIdx, data, isError) {
+    const el = document.getElementById(`result-${stepIdx}`);
+    el.textContent = typeof data === 'string' ? data : JSON.stringify(data, null, 2);
+    el.className = `result show ${isError ? 'error' : 'success'}`;
+  }
+
+  // 1. Upload Video
+  async function uploadVideo() {
+    const file = document.getElementById('videoFile').files[0];
+    if (!file) return alert('Pilih file video dulu');
+
+    const form = new FormData();
+    form.append('file', file);
+
+    showResult(0, 'Uploading...', false);
+    try {
+      const res = await fetch(`${API}/videos/upload`, { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) throw data;
+
+      state.videoId = data.video_id;
+      document.getElementById('captionVideoId').value = data.video_id;
+      document.getElementById('processVideoId').value = data.video_id;
+      document.getElementById('downloadVideoId').value = data.video_id;
+
+      showResult(0, data, false);
+    } catch (err) {
+      showResult(0, err, true);
+    }
+  }
+
+  // 2. Generate Caption
+  async function generateCaption() {
+    const videoId = document.getElementById('captionVideoId').value;
+    if (!videoId) return alert('Masukkan Video ID');
+
+    const body = {
+      language: document.getElementById('captionLang').value,
+      output_format: document.getElementById('captionFormat').value
+    };
+
+    showResult(1, 'Starting caption generation...', false);
+    try {
+      const res = await fetch(`${API}/videos/${videoId}/captions/generate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) throw data;
+
+      state.captionJobId = data.job_id;
+      showResult(1, data, false);
+      pollJob(data.job_id, 'caption');
+    } catch (err) {
+      showResult(1, err, true);
+    }
+  }
+
+  // Poll job status
+  async function pollJob(jobId, type) {
+    const statusEl = document.getElementById(`${type}Status`);
+    const dotEl = document.getElementById(`${type}Dot`);
+    const textEl = document.getElementById(`${type}StatusText`);
+    const progressEl = document.getElementById(`${type}Progress`);
+    statusEl.style.display = 'block';
+
+    const poll = async () => {
+      try {
+        const res = await fetch(`${API}/jobs/${jobId}`);
+        const data = await res.json();
+
+        const progress = data.progress || 0;
+        progressEl.style.width = `${progress}%`;
+        textEl.textContent = `${data.status} (${progress}%)`;
+
+        if (data.status === 'completed') {
+          dotEl.className = 'status-dot green';
+          textEl.textContent = 'Completed!';
+          progressEl.style.width = '100%';
+
+          if (type === 'caption') {
+            fetchCaptions(document.getElementById('captionVideoId').value);
+          }
+          showResult(type === 'caption' ? 1 : 3, data, false);
+          return;
+        }
+
+        if (data.status === 'failed') {
+          dotEl.className = 'status-dot red';
+          textEl.textContent = `Failed: ${data.error_message || 'Unknown error'}`;
+          showResult(type === 'caption' ? 1 : 3, data, true);
+          return;
+        }
+
+        setTimeout(poll, 2000);
+      } catch (err) {
+        dotEl.className = 'status-dot red';
+        textEl.textContent = 'Poll error';
+      }
+    };
+    poll();
+  }
+
+  // Fetch captions after generation
+  async function fetchCaptions(videoId) {
+    try {
+      const fmt = document.getElementById('captionFormat').value;
+      const res = await fetch(`${API}/videos/${videoId}/captions?format=${fmt}`);
+      const data = await res.json();
+      if (data.content) {
+        const preview = document.getElementById('captionPreview');
+        preview.style.display = 'block';
+        preview.textContent = data.content;
+      }
+    } catch {}
+  }
+
+  // 3. Upload Watermark
+  async function uploadWatermark() {
+    const file = document.getElementById('watermarkFile').files[0];
+    if (!file) return alert('Pilih file PNG dulu');
+
+    const form = new FormData();
+    form.append('file', file);
+
+    showResult(2, 'Uploading...', false);
+    try {
+      const res = await fetch(`${API}/watermarks/upload`, { method: 'POST', body: form });
+      const data = await res.json();
+      if (!res.ok) throw data;
+
+      state.watermarkId = data.watermark_id;
+      document.getElementById('processWatermarkId').value = data.watermark_id;
+      document.getElementById('applyWatermark').checked = true;
+      document.getElementById('watermarkOptions').style.display = 'block';
+
+      showResult(2, data, false);
+    } catch (err) {
+      showResult(2, err, true);
+    }
+  }
+
+  // 4. Process Video
+  async function processVideo() {
+    const videoId = document.getElementById('processVideoId').value;
+    if (!videoId) return alert('Masukkan Video ID');
+
+    const body = {
+      apply_captions: document.getElementById('applyCaptions').checked,
+      apply_watermark: document.getElementById('applyWatermark').checked
+    };
+
+    if (body.apply_watermark) {
+      body.watermark_id = document.getElementById('processWatermarkId').value;
+      body.watermark_position = document.getElementById('watermarkPosition').value;
+      body.watermark_opacity = parseFloat(document.getElementById('watermarkOpacity').value);
+      if (!body.watermark_id) return alert('Masukkan Watermark ID');
+    }
+
+    showResult(3, 'Starting video processing...', false);
+    try {
+      const res = await fetch(`${API}/videos/${videoId}/process`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body)
+      });
+      const data = await res.json();
+      if (!res.ok) throw data;
+
+      state.processJobId = data.job_id;
+      showResult(3, data, false);
+      pollJob(data.job_id, 'process');
+    } catch (err) {
+      showResult(3, err, true);
+    }
+  }
+
+  // 5. Download Output
+  function downloadOutput() {
+    const videoId = document.getElementById('downloadVideoId').value;
+    if (!videoId) return alert('Masukkan Video ID');
+
+    window.open(`${API}/videos/${videoId}/output`, '_blank');
+    showResult(4, `Download started for video: ${videoId}`, false);
+  }
+
+  // 6. List Jobs
+  async function listJobs() {
+    showResult(5, 'Loading...', false);
+    try {
+      const res = await fetch(`${API}/jobs`);
+      const data = await res.json();
+      if (!res.ok) throw data;
+      showResult(5, data, false);
+    } catch (err) {
+      showResult(5, err, true);
+    }
+  }
+</script>
+
+</body>
+</html>

@@ -1,0 +1,38 @@
+[project]
+name = "video-caption-watermark-api"
+version = "0.1.0"
+description = "API for adding captions and watermarks to e-course videos"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi==0.109.0",
+    "uvicorn[standard]==0.27.0",
+    "python-multipart==0.0.6",
+    "pydantic==2.5.3",
+    "pydantic-settings==2.1.0",
+    "celery==5.3.6",
+    "redis==5.0.1",
+    "ffmpeg-python==0.2.0",
+    "faster-whisper==0.10.0",
+]
+
+[project.optional-dependencies]
+test = [
+    "hypothesis==6.98.3",
+    "pytest==7.4.4",
+    "pytest-asyncio==0.23.3",
+    "httpx==0.26.0",
+]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+asyncio_mode = "auto"
+
+[tool.hypothesis]
+max_examples = 100
